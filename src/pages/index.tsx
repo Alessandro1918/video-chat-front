@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import Head from 'next/head'
 import Image from 'next/image'
 import { Inter } from 'next/font/google'
@@ -5,7 +6,14 @@ import styles from '@/styles/Home.module.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
+import { io } from 'socket.io-client'
+const socket = io("http://localhost:4000")
+
 export default function Home() {
+
+  useEffect(() => {
+    socket.connect()
+  }, [])
 
   return (
     <>
