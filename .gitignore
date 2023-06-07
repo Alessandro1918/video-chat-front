@@ -1,0 +1,13 @@
+# compiled output
+/dist
+/node_modules
+
+# local env files
+.env
+
+# next.js
+/.next/
+/out/
+
+# macOS
+.DS_Store
