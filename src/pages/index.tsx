@@ -6,14 +6,17 @@ import styles from '@/styles/Home.module.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
-import { io } from 'socket.io-client'
-const socket = io("http://localhost:4000")
+import { socket } from '../socket'
 
 export default function Home() {
 
   useEffect(() => {
-    socket.connect()
-  }, [])
+    socket.connect();
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   return (
     <>
