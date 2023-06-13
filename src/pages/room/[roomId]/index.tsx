@@ -51,7 +51,7 @@ export default function Room() {
       roomId, 
       userId, 
       `Room ${roomId} rules!`
-      )
+    )
   }
 
   return (
