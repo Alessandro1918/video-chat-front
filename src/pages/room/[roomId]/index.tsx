@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 
 // import styles from '@/styles/Home.module.css'
@@ -7,16 +7,23 @@ import { socket } from '../../../socket'
 
 export default function Room() {
 
+  const router = useRouter()                                  //get roomId from url
+
   const [ roomId, setRoomId ] = useState<any>(undefined)      //init var on the state to avoid multiple reloads
   const [ userId, setUserId ] = useState('')
-  
-  const router = useRouter()                                  //get roomId from url
+  const [ isVideoOn, setIsVideoOn ] = useState(true) 
+  const [ isAudioOn, setIsAudioOn ] = useState(true) 
+
+  const myStreamRef = useRef<HTMLVideoElement>(null)          //for local use
+  //const [ stream, setStream ] = useState<MediaStream>()     //for broadcast
 
   useEffect(() => {
     
     if (!router.isReady) return
 
     setRoomId(router.query.roomId)
+
+    setupStream(isVideoOn, isAudioOn)
 
     socket.connect()
     socket.on("connect", () => {
@@ -45,6 +52,22 @@ export default function Room() {
     }
   }, [router.isReady])
 
+  //Update stream each time the user change their audio/video configs
+  useEffect(() => {
+    setupStream(isVideoOn, isAudioOn)
+  }, [isVideoOn, isAudioOn])
+
+  //Configure stream based on local vars (stream should include video? Audio?)
+  function setupStream(isVideoOn: boolean, isAudioOn: boolean) {
+    navigator.mediaDevices.getUserMedia({
+      video: isVideoOn,
+      audio: isAudioOn
+    }).then(currentStream => {
+      myStreamRef.current!.srcObject = currentStream
+      //setStream(currentStream)
+    })
+  }
+
   function sendMessageToRoom() {
     socket.emit(
       "send-message-to-room", 
@@ -63,6 +86,23 @@ export default function Room() {
           type="button" 
           value="Send" 
           onClick={sendMessageToRoom}
+        />
+        <div>
+          <video 
+            ref={myStreamRef} 
+            autoPlay 
+            style={{ width: '400px', height: '300px' }}
+          />
+        </div>
+        <input 
+          type="button" 
+          value={isVideoOn ? "Video: ON" : "Video: OFF"} 
+          onClick={() => setIsVideoOn(!isVideoOn)}
+        />
+        <input 
+          type="button" 
+          value={isAudioOn ? "Audio: ON" : "Audio: OFF"} 
+          onClick={() => setIsAudioOn(!isAudioOn)}
         />
       </main>
     </>
