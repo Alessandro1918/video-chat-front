@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 
 // import styles from '@/styles/Home.module.css'
@@ -7,10 +7,15 @@ import { socket } from '../../../socket'
 
 export default function Room() {
 
+  const router = useRouter()                                  //get roomId from url
+
   const [ roomId, setRoomId ] = useState<any>(undefined)      //init var on the state to avoid multiple reloads
   const [ userId, setUserId ] = useState('')
-  
-  const router = useRouter()                                  //get roomId from url
+  const [ isVideoOn, setIsVideoOn ] = useState(true) 
+  const [ isAudioOn, setIsAudioOn ] = useState(true) 
+
+  const myStreamRef = useRef<HTMLVideoElement>(null)
+  // const [ stream, setStream ] = useState<MediaStream>()
 
   useEffect(() => {
     
@@ -18,14 +23,20 @@ export default function Room() {
 
     setRoomId(router.query.roomId)
 
+    setupStream(isVideoOn, isAudioOn)
+
     socket.connect()
     socket.on("connect", () => {
       setUserId(socket.id)
       socket.emit("join-room", router.query.roomId)
     })
-    
+
     socket.on('new-user-joined-room', userId =>  {
       console.log(`User ${userId} entered the room`)
+    })
+
+    socket.on('list-room-users', users =>  {
+      console.log(`Users already in the room: ${users}`)
     })
 
     socket.on('new-message-to-room', (userId, message) => {
@@ -39,11 +50,33 @@ export default function Room() {
     return () => {
       //Clean up:
       socket.off('new-user-joined-room')
+      socket.off('list-room-users')
       socket.off('new-message-to-room')
       socket.off('left-room')
       socket.disconnect()
     }
   }, [router.isReady])
+
+  //Update stream each time the user change their audio/video configs
+  useEffect(() => {
+    setupStream(isVideoOn, isAudioOn)
+  }, [isVideoOn, isAudioOn])
+
+  //Configure stream based on local vars (stream should include video? Audio?)
+  function setupStream(isVideoOn: boolean, isAudioOn: boolean) {
+    if (!isVideoOn && !isAudioOn) {
+      myStreamRef.current!.srcObject = null
+      // setStream(undefined)
+      return
+    }
+    navigator.mediaDevices.getUserMedia({
+      video: isVideoOn,
+      audio: isAudioOn
+    }).then(currentStream => {
+      myStreamRef.current!.srcObject = currentStream
+      //setStream(currentStream)
+    })
+  }
 
   function sendMessageToRoom() {
     socket.emit(
@@ -63,6 +96,23 @@ export default function Room() {
           type="button" 
           value="Send" 
           onClick={sendMessageToRoom}
+        />
+        <div>
+          <video 
+            ref={myStreamRef} 
+            autoPlay 
+            style={{ width: '400px', height: '300px' }}
+          />
+        </div>
+        <input 
+          type="button" 
+          value={isVideoOn ? "Video: ON" : "Video: OFF"} 
+          onClick={() => setIsVideoOn(!isVideoOn)}
+        />
+        <input 
+          type="button" 
+          value={isAudioOn ? "Audio: ON" : "Audio: OFF"} 
+          onClick={() => setIsAudioOn(!isAudioOn)}
         />
       </main>
     </>
