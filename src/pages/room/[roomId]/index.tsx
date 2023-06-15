@@ -35,6 +35,10 @@ export default function Room() {
       console.log(`User ${userId} entered the room`)
     })
 
+    socket.on('list-room-users', users =>  {
+      console.log(`Users already in the room: ${users}`)
+    })
+
     socket.on('new-message-to-room', (userId, message) => {
       console.log(`Message from user ${userId}: ${message}`)
     })
@@ -46,6 +50,7 @@ export default function Room() {
     return () => {
       //Clean up:
       socket.off('new-user-joined-room')
+      socket.off('list-room-users')
       socket.off('new-message-to-room')
       socket.off('left-room')
       socket.disconnect()
