@@ -14,8 +14,8 @@ export default function Room() {
   const [ isVideoOn, setIsVideoOn ] = useState(true) 
   const [ isAudioOn, setIsAudioOn ] = useState(true) 
 
-  const myStreamRef = useRef<HTMLVideoElement>(null)          //for local use
-  //const [ stream, setStream ] = useState<MediaStream>()     //for broadcast
+  const myStreamRef = useRef<HTMLVideoElement>(null)
+  // const [ stream, setStream ] = useState<MediaStream>()
 
   useEffect(() => {
     
@@ -30,7 +30,7 @@ export default function Room() {
       setUserId(socket.id)
       socket.emit("join-room", router.query.roomId)
     })
-    
+
     socket.on('new-user-joined-room', userId =>  {
       console.log(`User ${userId} entered the room`)
     })
@@ -59,6 +59,11 @@ export default function Room() {
 
   //Configure stream based on local vars (stream should include video? Audio?)
   function setupStream(isVideoOn: boolean, isAudioOn: boolean) {
+    if (!isVideoOn && !isAudioOn) {
+      myStreamRef.current!.srcObject = null
+      // setStream(undefined)
+      return
+    }
     navigator.mediaDevices.getUserMedia({
       video: isVideoOn,
       audio: isAudioOn
