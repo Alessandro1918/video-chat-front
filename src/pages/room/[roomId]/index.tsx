@@ -32,36 +32,6 @@ export default function Room() {
 
     setRoomId(router.query.roomId)
 
-    navigator.mediaDevices.getUserMedia({
-      video: isVideoOn,
-      audio: isAudioOn
-    }).then(currentStream => {
-      myStreamRef.current!.srcObject = currentStream
-      // setStream(currentStream)
-
-      socket.connect()
-      socket.on("connect", () => {
-        setMyUserId(socket.id)
-
-        socket.on('list-room-users', users =>  {
-          console.log(`Users already in the room: ${users}`)
-          createUsers(users, socket.id, currentStream)
-        })
-
-        socket.on('new-signal-available', payload =>  {
-          console.log(`Got signal from new user in the room: user ${payload.callerId}`)
-          addUser(payload.signal, payload.callerId, currentStream)
-        })
-
-        socket.on('return-signal-available', payload =>  {
-          console.log(`Got signal from user already in the room: user ${payload.id}`)
-          linkPeerToUser(payload.signal, payload.id)
-        })
-
-        socket.emit("join-room", router.query.roomId)
-      })
-    })
-
     socket.on('new-user-joined-room', userId =>  {
       console.log(`User ${userId} entered the room`)
     })
@@ -73,6 +43,37 @@ export default function Room() {
     socket.on('left-room', userId => {
       console.log(`User ${userId} left the room`)
       removeUser(userId)
+    })
+
+    navigator.mediaDevices.getUserMedia({
+      video: isVideoOn,
+      audio: isAudioOn
+    }).then(currentStream => {
+      myStreamRef.current!.srcObject = currentStream
+      // setStream(currentStream)
+
+      //If those listeners were outside the async function "getUserMedia", they would use the old value for "stream" (null), since "setStream" is async
+      socket.on('list-room-users', users =>  {
+        console.log(`Users already in the room: ${users}`)
+        createUsers(users, socket.id, currentStream)
+      })
+
+      socket.on('new-signal-available', payload =>  {
+        console.log(`Got signal from new user in the room: user ${payload.callerId}`)
+        addUser(payload.signal, payload.callerId, currentStream)
+      })
+
+      socket.on('return-signal-available', payload =>  {
+        console.log(`Got signal from user already in the room: user ${payload.id}`)
+        linkPeerToUser(payload.signal, payload.id)
+      })
+
+      socket.connect()
+      socket.on("connect", () => {
+        setMyUserId(socket.id)
+
+        socket.emit("join-room", router.query.roomId)
+      })
     })
 
     return () => {
