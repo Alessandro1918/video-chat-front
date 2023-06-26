@@ -8,24 +8,23 @@ import { socket } from '../../../socket'
 
 export default function Room() {
 
-  interface PeerRefProps {
-    peerId: string
-    peer: Peer.Instance
+  interface PeerProps {
+    id: string              //id from the "socket.io" package
+    peer: Peer.Instance     //peer from the "simple-peer" package
   }
 
   const router = useRouter()                                  //get roomId from url
 
-  const [ roomId, setRoomId ] = useState<any>(undefined)      //init var on the state to avoid multiple reloads
+  const [ roomId, setRoomId ] = useState<any>(undefined)
   const [ myUserId, setMyUserId ] = useState('')
-  const [ isVideoOn, setIsVideoOn ] = useState(true) 
-  const [ isAudioOn, setIsAudioOn ] = useState(true) 
 
   const myStreamRef = useRef<HTMLVideoElement>(null)
   // const [ stream, setStream ] = useState<MediaStream>()
 
-  const peersRefs = useRef<PeerRefProps[]>([])                //ties the "Peer" object with it's socket.id
-  const [ peers, setPeers ] = useState<Peer.Instance[]>([])   //map thru this array to get the users videos
+  const refs = useRef<PeerProps[]>([])                              //ties the "Peer" object with it's socket.id
+  const [ peers, setPeers ] = useState<Peer.Instance[]>([])         //map thru this array to get the users videos
 
+  //Initial setup:
   useEffect(() => {
     
     if (!router.isReady) return
@@ -42,17 +41,16 @@ export default function Room() {
 
     socket.on('left-room', userId => {
       console.log(`User ${userId} left the room`)
-      removeUser(userId)
     })
 
     navigator.mediaDevices.getUserMedia({
-      video: isVideoOn,
-      audio: isAudioOn
+      video: true,    //can be replaced by a state var
+      audio: true     //can be replaced by a state var
     }).then(currentStream => {
       myStreamRef.current!.srcObject = currentStream
       // setStream(currentStream)
 
-      //If those listeners were outside the async function "getUserMedia", they would use the old value for "stream" (null), since "setStream" is async
+      //If those 2 listeners were outside the async function "getUserMedia", they would use the old value for "stream" (null), since "setStream" is also async
       socket.on('list-room-users', users =>  {
         console.log(`Users already in the room: ${users}`)
         createUsers(users, socket.id, currentStream)
@@ -91,8 +89,8 @@ export default function Room() {
 
     users.map(userId => {
       const peer = createPeer(userId, myId, myStream)
-      peersRefs.current.push({
-        peerId: userId,
+      refs.current.push({
+        id: userId,
         peer,
       })
       peers.push(peer)
@@ -120,8 +118,8 @@ export default function Room() {
   function addUser(signal: Peer.SignalData, callerId: string, stream: MediaStream) {
     const peer = addPeer(signal, callerId, stream)
 
-    peersRefs.current.push({
-      peerId: callerId,
+    refs.current.push({
+      id: callerId,
       peer,
     })
 
@@ -147,13 +145,8 @@ export default function Room() {
 
   //Join to the users's ref stream the incoming peer's signal
   function linkPeerToUser(signal: Peer.SignalData, id: string) {
-    const item = peersRefs.current.find(p => p.peerId === id)
+    const item = refs.current.find(e => e.id === id)
     item!.peer.signal(signal)
-  }
-
-  //Delete disconnected user from my UI
-  function removeUser(userId: string) {
-    // TODO
   }
 
   //Returns a video element of one peer
@@ -191,7 +184,6 @@ export default function Room() {
     <>
       <main >
         <h1>{`Room: ${roomId}`}</h1>
-        <h3>{`User: ${myUserId}`}</h3>
         <input 
           type="button" 
           value="Send" 
@@ -205,7 +197,8 @@ export default function Room() {
             style={{ width: '400px', height: '300px' }}
           />
         </div>
-        <input 
+        <h3>{`My ID: ${myUserId}`}</h3>
+        {/* <input 
           type="button" 
           value={isVideoOn ? "Video: ON" : "Video: OFF"} 
           onClick={() => setIsVideoOn(!isVideoOn)}
@@ -214,15 +207,18 @@ export default function Room() {
           type="button" 
           value={isAudioOn ? "Audio: ON" : "Audio: OFF"} 
           onClick={() => setIsAudioOn(!isAudioOn)}
-        />
+        /> */}
+
+        {/** V1: Map state var */}
         {peers.map((peer, index) => {
-        {/* {peersRefs.current.map((ref, index) => { */}
+        {/** V2: Map ref */}
+        // {refs.current.map((ref, index) => { 
           return (
             <div key={index}>
-              <PeerVideo key={index} peer={peer} />
-              {/* <PeerVideo key={index} peer={ref.peer} /> */}
-              <h3>{`User: ${peersRefs.current[index].peerId}`}</h3>
-              {/* <h3>{`User: ${ref.peerId}`}</h3> */}
+              <PeerVideo peer={peer} />
+              {/* <PeerVideo peer={ref.peer} /> */}
+              <h3>{`User: ${refs.current[index].id}`}</h3>
+              {/* <h3>{`User: ${ref.id}`}</h3> */}
             </div>
           );
         })}
