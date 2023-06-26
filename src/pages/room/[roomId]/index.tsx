@@ -23,6 +23,7 @@ export default function Room() {
 
   const refs = useRef<PeerProps[]>([])                              //ties the "Peer" object with it's socket.id
   const [ peers, setPeers ] = useState<Peer.Instance[]>([])         //map thru this array to get the users videos
+  const [ offlineUsers, setOfflineUsers ] = useState<string[]>([])  //instead of removing disconnected users from state/ref, just don't render them. (Thsi can be a performance issue in the future)
 
   //Initial setup:
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function Room() {
 
     socket.on('left-room', userId => {
       console.log(`User ${userId} left the room`)
+      setOfflineUsers(users => [...users, userId])
     })
 
     navigator.mediaDevices.getUserMedia({
@@ -214,6 +216,7 @@ export default function Room() {
         {/** V2: Map ref */}
         // {refs.current.map((ref, index) => { 
           return (
+            !offlineUsers.includes(refs.current[index].id) &&
             <div key={index}>
               <PeerVideo peer={peer} />
               {/* <PeerVideo peer={ref.peer} /> */}
